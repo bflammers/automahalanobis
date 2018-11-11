@@ -5,7 +5,7 @@ channels:
 dependencies:
   - blas=1.0=mkl
   - ca-certificates=2018.03.07=0
-  - certifi=2018.8.24=py37_1
+  - certifi=2018.10.15=py37_0
   - cffi=1.11.5=py37he75722e_1
   - cycler=0.10.0=py37_0
   - dbus=1.13.2=h714fa37_1
@@ -23,52 +23,51 @@ dependencies:
   - libffi=3.2.1=hd88cf55_4
   - libgcc-ng=8.2.0=hdf63c60_1
   - libgfortran-ng=7.3.0=hdf63c60_0
-  - libpng=1.6.34=hb9fc6fc_0
+  - libpng=1.6.35=hbc83047_0
   - libstdcxx-ng=8.2.0=hdf63c60_1
   - libtiff=4.0.9=he85c1e1_2
   - libuuid=1.0.3=h1bed415_2
   - libxcb=1.13=h1bed415_1
   - libxml2=2.9.8=h26e45fe_1
-  - matplotlib=3.0.0=py37h5429711_0
+  - matplotlib=3.0.1=py37h5429711_0
   - mkl=2019.0=118
   - mkl_fft=1.0.6=py37h7dd41cf_0
   - mkl_random=1.0.1=py37h4414c95_1
   - ncurses=6.1=hf484d3e_0
   - ninja=1.8.2=py37h6bb024c_1
-  - numpy=1.15.2=py37h1d66e8a_1
-  - numpy-base=1.15.2=py37h81de0dd_1
+  - numpy=1.15.4=py37h1d66e8a_0
+  - numpy-base=1.15.4=py37h81de0dd_0
   - olefile=0.46=py37_0
   - openssl=1.0.2p=h14c3975_0
   - pandas=0.23.4=py37h04863e7_0
-  - patsy=0.5.0=py37_0
+  - patsy=0.5.1=py37_0
   - pcre=8.42=h439df22_0
   - pillow=5.3.0=py37h34e0f95_0
-  - pip=10.0.1=py37_0
+  - pip=18.1=py37_0
   - pycparser=2.19=py37_0
-  - pyparsing=2.2.2=py37_0
+  - pyparsing=2.3.0=py37_0
   - pyqt=5.9.2=py37h05f1152_2
   - python=3.7.0=h6e4f718_3
-  - python-dateutil=2.7.3=py37_0
-  - pytz=2018.5=py37_0
+  - python-dateutil=2.7.5=py37_0
+  - pytz=2018.7=py37_0
   - qt=5.9.6=h8703b6f_2
   - readline=7.0=h7b6447c_5
   - scikit-learn=0.20.0=py37h4989274_1
   - scipy=1.1.0=py37hfa4b5c9_1
   - seaborn=0.9.0=py37_0
-  - setuptools=40.4.3=py37_0
+  - setuptools=40.5.0=py37_0
   - sip=4.19.8=py37hf484d3e_0
   - six=1.11.0=py37_1
   - sqlite=3.25.2=h7b6447c_0
   - statsmodels=0.9.0=py37h035aef0_0
   - tk=8.6.8=hbc83047_0
   - tornado=5.1.1=py37h7b6447c_0
-  - wheel=0.32.1=py37_0
+  - wheel=0.32.2=py37_0
   - xz=5.2.4=h14c3975_4
   - zlib=1.2.11=ha838bed_2
-  - pytorch-cpu=0.4.1=py37_cpu_1
-  - torchvision-cpu=0.2.1=py37_1
+  - pytorch=0.4.1=py37_py36_py35_py27__9.0.176_7.1.2_2
+  - torchvision=0.2.1=py37_1
   - pip:
-    - torch==0.4.1
-    - torchvision==0.2.1
+    - torch==0.4.1.post2
 prefix: /home/bart/anaconda3/envs/pytorch
 

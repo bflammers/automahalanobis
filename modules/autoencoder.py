@@ -1,50 +1,65 @@
 # -*- coding: utf-8 -*-
 """
-PyTorch: Custom nn Modules
+Autoencoder module
 --------------------------
-
-A fully-connected ReLU network with one hidden layer, trained to predict y from x
-by minimizing squared Euclidean distance.
-
-This implementation defines the model as a custom Module subclass. Whenever you
-want a model more complex than a simple sequence of existing Modules you will
-need to define your model this way.
 """
 import torch
 
+class MahalanobisLayer(torch.nn.Linear):
 
-class TwoLayerNet(torch.nn.Module):
-    def __init__(self, D_in, H, D_out):
-        """
-        In the constructor we instantiate two nn.Linear modules and assign them as
-        member variables.
-        """
-        super(TwoLayerNet, self).__init__()
-        self.linear1 = torch.nn.Linear(D_in, H)
-        self.linear2 = torch.nn.Linear(H, D_out)
+    def __init__(self, dim):
+        raise NotImplementedError
+
+    def distance(self, x, x_fit):
+        raise NotImplementedError
+
+    def update(self):
+        raise NotImplementedError
+
+
+class Autoencoder(torch.nn.Module):
+
+    def __init__(self, d_in, h1, h2, h3):
+        super(Autoencoder, self).__init__()
+        self.linear1 = torch.nn.Linear(d_in, h1) # First hidden layer
+        self.linear2 = torch.nn.Linear(h1, h2)   # Compression layer
+        self.linear3 = torch.nn.Linear(h2, h3)   # Third hidden layer
+        self.linear4 = torch.nn.Linear(h3, d_in) # Output layer
+
+    def encode(self, x):
+        x = torch.tanh(self.linear1(x))
+        x = self.linear2(x)
+        return x
+
+    def decode(self, x):
+        x = torch.tanh (self.linear3(x))
+        x = self.linear4(x)
+        return x
 
     def forward(self, x):
-        """
-        In the forward function we accept a Tensor of input data and we must return
-        a Tensor of output data. We can use Modules defined in the constructor as
-        well as arbitrary operators on Tensors.
-        """
-        h_relu = self.linear1(x).clamp(min=0)
-        y_pred = self.linear2(h_relu)
-        return y_pred
+        encoding = self.encode(x)
+        x_fit = self.decode(encoding)
+
+        return x_fit
 
 
 if __name__ == "__main__":
-    # N is batch size; D_in is input dimension;
-    # H is hidden dimension; D_out is output dimension.
-    N, D_in, H, D_out = 64, 1000, 100, 10
+    # N is batch size; D_in is input dimension (and thus output dimension);
+    # H1, H2 and H3 are hidden layer dimensions
+    N, D_in, H1, H2, H3 = 64, 20, 100, 10, 100
 
     # Create random Tensors to hold inputs and outputs
     x = torch.randn(N, D_in)
-    y = torch.randn(N, D_out)
 
     # Construct our model by instantiating the class defined above
-    model = TwoLayerNet(D_in, H, D_out)
+    model = Autoencoder(D_in, H1, H2, H3)
+
+    # Select device to train model on and copy model to device
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    # Also copy data to device, when training on real data this should be done for each mini-batch
+    x = x.to(device)
 
     # Construct our loss function and an Optimizer. The call to model.parameters()
     # in the SGD constructor will contain the learnable parameters of the two
@@ -53,10 +68,10 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters())
     for t in range(100):
         # Forward pass: Compute predicted y by passing x to the model
-        y_pred = model(x)
+        x_fit = model(x)
 
         # Compute and print loss
-        loss = criterion(y_pred, y)
+        loss = criterion(x_fit, x)
         print(t, loss.item())
 
         # Zero gradients, perform a backward pass, and update the weights.
@@ -64,6 +79,4 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(device)
-    print(torch.cuda.is_available())
+    print("Trained model on device: {}".format(device))
