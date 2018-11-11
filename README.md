@@ -1,3 +1,3 @@
-### Experiment Mahalanobis autoencoder
+### Mahalanobis autoencoder for anomaly detection
 
-An experiment
+A benchmarking experiment to see if a Mahalanobis autoencoder is better at detecting anomalies than a normal autoencoder. 
