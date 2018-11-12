@@ -4,43 +4,39 @@ Autoencoder module
 --------------------------
 """
 import torch
+import torch.nn as nn
+from modules.mahalanobis import MahalanobisLayer
 
-class MahalanobisLayer(torch.nn.Linear):
-
-    def __init__(self, dim):
-        raise NotImplementedError
-
-    def distance(self, x, x_fit):
-        raise NotImplementedError
-
-    def update(self):
-        raise NotImplementedError
-
-
-class Autoencoder(torch.nn.Module):
+class Autoencoder(nn.Module):
 
     def __init__(self, d_in, h1, h2, h3):
         super(Autoencoder, self).__init__()
-        self.linear1 = torch.nn.Linear(d_in, h1) # First hidden layer
-        self.linear2 = torch.nn.Linear(h1, h2)   # Compression layer
-        self.linear3 = torch.nn.Linear(h2, h3)   # Third hidden layer
-        self.linear4 = torch.nn.Linear(h3, d_in) # Output layer
+
+        self.encoding_layers = torch.nn.Sequential(
+            nn.Linear(d_in, h1),  # First hidden layer
+            nn.Tanh(),            # First hidden layer
+            nn.Linear(h1, h2)     # Compression layer
+        )
+
+        self.decoding_layers = torch.nn.Sequential(
+            nn.Linear(h2, h3),    # Third hidden layer
+            nn.Tanh(),            # Third hidden layer
+            nn.Linear(h3, d_in)   # Output layer
+        )
+
+        self.mahalanobis = MahalanobisLayer(d_in)
 
     def encode(self, x):
-        x = torch.tanh(self.linear1(x))
-        x = self.linear2(x)
-        return x
+        return self.encoding_layers(x)
 
     def decode(self, x):
-        x = torch.tanh (self.linear3(x))
-        x = self.linear4(x)
-        return x
+        return self.decoding_layers(x)
 
     def forward(self, x):
-        encoding = self.encode(x)
-        x_fit = self.decode(encoding)
-
-        return x_fit
+        x_fit = self.encoding_layers(x)
+        x_fit = self.decoding_layers(x_fit)
+        err = self.mahalanobis(x, x_fit)
+        return err
 
 
 if __name__ == "__main__":
@@ -56,6 +52,7 @@ if __name__ == "__main__":
 
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = "cpu"
     model.to(device)
 
     # Also copy data to device, when training on real data this should be done for each mini-batch
