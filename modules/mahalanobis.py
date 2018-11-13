@@ -5,20 +5,22 @@ Mahalanobis module
 """
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
 
 class MahalanobisLayer(nn.Module):
 
     def __init__(self, dim, decay = 0.1):
         super(MahalanobisLayer, self).__init__()
-        self.S = torch.eye(dim, requires_grad = False)
-        self.S_inv = torch.eye(dim, requires_grad = False)
+        self.register_buffer('S', torch.eye(dim))
+        self.register_buffer('S_inv', torch.eye(dim))
         self.decay = decay
+        self.training = False
 
     def cov(self, x):
         x -= torch.mean(x, dim=0)
         return 1 / (x.size(0) - 1) * x.t().mm(x)
 
-    def forward(self, x, x_fit):
+    def distance(self, x, x_fit):
         """
         Calculates Mahalanobis distance between x and x_fit
         """
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     mah_layer = MahalanobisLayer(3, decay=0.99)
     mah_layer.S_inv = iv
 
-    pytorch_dist = mah_layer.forward(X1, X2)
+    pytorch_dist = mah_layer.distance(X1, X2)
 
     # Check if almost equal
     np.testing.assert_almost_equal(scipy_dist, pytorch_dist.numpy())
@@ -72,3 +74,6 @@ if __name__ == "__main__":
     for i in range(20):
         mah_layer.update(X, X_fit)
     np.testing.assert_almost_equal(np_cov_delta, mah_layer.S.numpy())
+
+    # Test if numpy inverse and pytorch pseudo inverse are close
+    np.testing.assert_almost_equal(np.linalg.inv(np_cov_delta), mah_layer.S_inv.numpy(), decimal=5)

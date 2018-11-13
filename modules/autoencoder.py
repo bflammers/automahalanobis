@@ -33,10 +33,10 @@ class Autoencoder(nn.Module):
         return self.decoding_layers(x)
 
     def forward(self, x):
-        x_fit = self.encoding_layers(x)
-        x_fit = self.decoding_layers(x_fit)
-        err = self.mahalanobis.forward(x, x_fit)
-        return err
+        x_enc = self.encoding_layers(x)
+        x_fit = self.decoding_layers(x_enc)
+        #err = self.mahalanobis.distance(x_in, x_fit)
+        return x_fit
 
 
 if __name__ == "__main__":
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = "cpu"
+    #device = "cpu"
     model.to(device)
 
     # Also copy data to device, when training on real data this should be done for each mini-batch
@@ -62,13 +62,15 @@ if __name__ == "__main__":
     # in the SGD constructor will contain the learnable parameters of the two
     # nn.Linear modules which are members of the model.
     criterion = torch.nn.MSELoss(reduction='sum')
-    optimizer = torch.optim.Adam(model.parameters())
-    for t in range(100):
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+
+    for t in range(10000):
         # Forward pass: Compute predicted y by passing x to the model
         x_fit = model(x)
 
         # Compute and print loss
-        loss = criterion(x_fit, torch.zeros(x.size(0)))
+        #loss = criterion(x_fit, torch.zeros(x.size(0), device=device))
+        loss = criterion(x_fit, x)
         print(t, loss.item())
 
         # Zero gradients, perform a backward pass, and update the weights.
