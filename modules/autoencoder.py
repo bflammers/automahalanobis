@@ -15,7 +15,7 @@ class Autoencoder(nn.Module):
         self.encoding_layers = torch.nn.Sequential(
             nn.Linear(d_in, h1),  # First hidden layer
             nn.Tanh(),            # First hidden layer
-            nn.Linear(h1, h2)     # Compression layer
+            nn.Linear(h1, h2)     # Compression layer (no non-linearity)
         )
 
         self.decoding_layers = torch.nn.Sequential(
@@ -35,7 +35,7 @@ class Autoencoder(nn.Module):
     def forward(self, x):
         x_fit = self.encoding_layers(x)
         x_fit = self.decoding_layers(x_fit)
-        err = self.mahalanobis(x, x_fit)
+        err = self.mahalanobis.forward(x, x_fit)
         return err
 
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         x_fit = model(x)
 
         # Compute and print loss
-        loss = criterion(x_fit, x)
+        loss = criterion(x_fit, torch.zeros(x.size(0)))
         print(t, loss.item())
 
         # Zero gradients, perform a backward pass, and update the weights.

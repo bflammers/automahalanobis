@@ -14,48 +14,61 @@ class MahalanobisLayer(nn.Module):
         self.S_inv = torch.eye(dim, requires_grad = False)
         self.decay = decay
 
+    def cov(self, x):
+        x -= torch.mean(x, dim=0)
+        return 1 / (x.size(0) - 1) * x.t().mm(x)
+
     def forward(self, x, x_fit):
         """
         Calculates Mahalanobis distance between x and x_fit
         """
         delta = x - x_fit
-        m = torch.dot(torch.matmul(delta, self.S_inv), delta)
-        return torch.sqrt(m)
+        m = torch.mm(torch.mm(delta, self.S_inv), delta.t())
+        return torch.diag(torch.sqrt(m))
 
     def update(self, x, x_fit):
         delta = x - x_fit
-        self.S = (1 - self.decay) * self.S + self.decay * torch.cov(delta)
-        self.S_inv = torch.inverse(self.S)
+        self.S = (1 - self.decay) * self.S + self.decay * self.cov(delta)
+        self.S_inv = torch.pinverse(self.S)
 
 if __name__ == "__main__":
 
     from scipy.spatial import distance
     import numpy as np
 
+    # Some example data for testing
     v  = torch.Tensor([[1, 0.5, 0.5], [0.5, 1, 0.5], [0.5, 0.5, 1]])
     iv = torch.inverse(v)
-    x1 = torch.Tensor([1, 0, 0])
-    x2 = torch.Tensor([0, 1, 0])
-    x3 = torch.Tensor([0, 2, 0])
+    X1 = torch.Tensor([[1, 0, 0], [0, 1, 0], [0, 2, 0]])
+    X2 = torch.Tensor([[0, 1, 0], [0, 2, 0], [0, 2, 0]])
 
     # Mahalanobis distance using scipy
-    scipy_12 = distance.mahalanobis(x1.numpy(), x2.numpy(), iv.numpy())
-    scipy_23 = distance.mahalanobis(x2.numpy(), x3.numpy(), iv.numpy())
-    scipy_13 = distance.mahalanobis(x1.numpy(), x3.numpy(), iv.numpy())
+    scipy_dist = np.array([distance.mahalanobis(x1.numpy(), x2.numpy(), iv.numpy()) for x1, x2 in zip(X1, X2)])
 
     # Mahalanobis distance pytorch implementation
-    mah_layer = MahalanobisLayer(3)
+    mah_layer = MahalanobisLayer(3, decay=0.99)
     mah_layer.S_inv = iv
 
-    pytorch_12 = mah_layer.forward(x1, x2)
-    pytorch_23 = mah_layer.forward(x2, x3)
-    pytorch_13 = mah_layer.forward(x1, x3)
+    pytorch_dist = mah_layer.forward(X1, X2)
 
     # Check if almost equal
-    np.testing.assert_almost_equal(scipy_12, pytorch_12.numpy())
-    np.testing.assert_almost_equal(scipy_23, pytorch_23.numpy())
-    np.testing.assert_almost_equal(scipy_13, pytorch_13.numpy())
+    np.testing.assert_almost_equal(scipy_dist, pytorch_dist.numpy())
 
+    # Covariance method
+    X = torch.rand(10, 3)
+    np_cov_X = np.cov(X.numpy(), rowvar=False)
+    pytorch_cov_X = mah_layer.cov(X)
 
-    mah_layer.update(x1, x3)
+    # Check if almost equal
+    np.testing.assert_almost_equal(np_cov_X, pytorch_cov_X.numpy())
 
+    # Update method
+    X_fit = torch.rand(10, 3)
+    delta = X - X_fit
+    np_cov_delta = np.cov(delta.numpy(), rowvar=False)
+    pytorch_cov_delta = mah_layer.cov(delta)
+
+    # Check if almost equal after enough updates
+    for i in range(20):
+        mah_layer.update(X, X_fit)
+    np.testing.assert_almost_equal(np_cov_delta, mah_layer.S.numpy())
