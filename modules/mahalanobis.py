@@ -5,7 +5,6 @@ Mahalanobis module
 """
 import torch
 import torch.nn as nn
-from torch.nn.parameter import Parameter
 
 class MahalanobisLayer(nn.Module):
 
@@ -13,20 +12,21 @@ class MahalanobisLayer(nn.Module):
         super(MahalanobisLayer, self).__init__()
         self.register_buffer('S', torch.eye(dim))
         self.register_buffer('S_inv', torch.eye(dim))
+        #self.S = torch.eye(dim, requires_grad=False)
+        #self.S_inv = torch.eye(dim, requires_grad=False)
         self.decay = decay
-        self.training = False
 
-    def cov(self, x):
-        x -= torch.mean(x, dim=0)
-        return 1 / (x.size(0) - 1) * x.t().mm(x)
-
-    def distance(self, x, x_fit):
+    def forward(self, x, x_fit):
         """
         Calculates Mahalanobis distance between x and x_fit
         """
         delta = x - x_fit
         m = torch.mm(torch.mm(delta, self.S_inv), delta.t())
         return torch.diag(torch.sqrt(m))
+
+    def cov(self, x):
+        x -= torch.mean(x, dim=0)
+        return 1 / (x.size(0) - 1) * x.t().mm(x)
 
     def update(self, x, x_fit):
         delta = x - x_fit
@@ -51,7 +51,28 @@ if __name__ == "__main__":
     mah_layer = MahalanobisLayer(3, decay=0.99)
     mah_layer.S_inv = iv
 
-    pytorch_dist = mah_layer.distance(X1, X2)
+    pytorch_dist = mah_layer(X1, X2)
+
+    criterion = torch.nn.MSELoss(reduction='sum')
+
+    a = torch.tensor(X2, requires_grad=True)
+    print(X1.requires_grad)
+    print(a.requires_grad)
+    #new_mah_layer = MahalanobisLayer(3)
+    #b = new_mah_layer(X1, a)
+    #delta = X1 - a
+    #m = torch.mm(torch.mm(delta, iv), delta.t())
+    #d =  torch.diag(torch.sqrt(m))
+    a = torch.mm(a, X1)
+    b = criterion(a, torch.zeros(3,3))
+
+    #b = torch.sum(d)
+    print(b)
+    print(a)
+    b.backward()
+    print(b.grad)
+    print(a.grad)
+    #print(d.grad)
 
     # Check if almost equal
     np.testing.assert_almost_equal(scipy_dist, pytorch_dist.numpy())
