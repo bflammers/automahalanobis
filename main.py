@@ -1,62 +1,91 @@
 
 import torch
+import argparse
+
 from modules.autoencoder import Autoencoder
-import h5py
-import numpy as np
+from utils.dataloading import load_dataset
 
-# Read data
-file = h5py.File('data/smtp_kddcup99/smtp.mat', 'r')
-data_X = np.array(file.get('X')).transpose()
-data_y = np.array(file.get('y')).transpose()
+from tensorboardX import SummaryWriter
 
+writer = SummaryWriter()
 
+parser = argparse.ArgumentParser(description='Automahalanobis experiment')
 
-# N is batch size; D_in is input dimension (and thus output dimension);
-# H1, H2 and H3 are hidden layer dimensions
-N, D_in, H1, H2, H3 = 128, 10, 30, 3, 30
+# Dataset args
+parser.add_argument('--dataset_name', type=str, default='kdd_smtp',
+                    help='name of the dataset')
+parser.add_argument('--test_prop', type=str, default=0.2)
+parser.add_argument('--val_prop', type=str, default=0.2)
 
-# Create random Tensors to hold inputs and outputs
-x = torch.Tensor(torch.randn(N, D_in))
+# Training args
+parser.add_argument('--n_epochs', type=int, default=500)
+parser.add_argument('--batch_size', type=int, default=128)
+parser.add_argument('--cuda', type=bool, default=True)
 
-# Construct our model by instantiating the class defined above
-model = Autoencoder(D_in, H1, H2, H3, True, 0.001)
+# Collect args and kwargs
+args = parser.parse_args()
+args.cuda = args.cuda if torch.cuda.is_available() else False
+kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-# Select device to train model on and copy model to device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model.to(device)
+if __name__ == '__main__':
 
-# Also copy data to device, when training on real data this should be done for each mini-batch
-x = x.to(device)
+    # Set hidden layer dimensions
+    H1, H2, H3 =  10, 2, 10
 
-# Construct our loss function and an optimizer
-#criterion = torch.nn.MSELoss(reduction='sum')
-criterion = nn.L1Loss()
-#optimizer = torch.optim.Adam(model.parameters())
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0, nesterov=False)
+    # Load data
+    train_loader, val_loader, test_loader, labels_split, model_args = \
+        load_dataset(args, **kwargs)
 
-for t in range(2000):
-    # Forward pass: Compute predicted y by passing x to the model
-    errors = model(x)
+    # Construct our model by instantiating the class defined above
+    model = Autoencoder(model_args.dim_input, H1, H2, H3, True, 0.1)
+    model.double()
 
-    # Compute and print loss
-    loss = criterion(errors, torch.zeros(errors.size(), device=device)) #x_fit.size(), device=device))
-    print(t, loss.item())
+    # Select device to train model on and copy model to device
+    device = torch.device("cuda:0" if args.cuda else "cpu")
+    model.to(device)
 
-    # Zero gradients, perform a backward pass, and update the weights.
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+    # Also copy data to device, when training on real data this should be done for each mini-batch
 
-    if model.mahalanobis_layer:
-        with torch.no_grad():
-            x_fit = model.reconstruct(x)
-            model.mahalanobis.update(x, x_fit)
+    # Construct our loss function and an optimizer
+    #criterion = torch.nn.MSELoss(reduction='sum')
+    criterion = torch.nn.L1Loss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    #optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0, nesterov=False)
 
-print("Trained model on device: {}".format(device))
+    i = 0
+    for k in range(1, args.n_epochs + 1):
 
-print(errors)
-print(x)
-print(model.reconstruct(x))
-if model.mahalanobis_layer:
+        for X_batch, y_batch in train_loader:
+
+            # Copy data to device
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+
+            # Forward pass: Compute predicted y by passing x to the model
+            errors = model(X_batch)
+
+            # Compute and print loss
+            loss = criterion(errors, y_batch)
+            print('Epoch: {}/{} -- Updatestep: {} -- Loss: {}'.format(k, args.n_epochs, i, loss.item()))
+
+            writer.add_scalar('data/loss', loss.item(), i)
+            i += 1
+
+            # Zero gradients, perform a backward pass, and update the weights.
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        if model.mahalanobis_layer:
+            with torch.no_grad():
+                X_fit = model.reconstruct(X_batch)
+                model.mahalanobis.update(X_batch, X_fit)
+
+    print("Trained model on device: {}".format(device))
+
     print(model.mahalanobis.S)
     print(model.mahalanobis.S_inv)
+
+    input('Press key to continue')
+
+    # export scalar data to JSON for external processing
+    writer.close()
