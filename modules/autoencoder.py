@@ -9,7 +9,8 @@ from modules.mahalanobis import MahalanobisLayer
 
 class Autoencoder(nn.Module):
 
-    def __init__(self, d_in, h1, h2, h3, mahalanobis_layer=False, mahalanobis_cov_decay=0.1):
+    def __init__(self, d_in, h1, h2, h3, mahalanobis_layer=False,
+                 mahalanobis_cov_decay=0.1, distort_inputs=False):
         super(Autoencoder, self).__init__()
 
         self.encoding_layers = torch.nn.Sequential(
@@ -29,8 +30,11 @@ class Autoencoder(nn.Module):
         if self.mahalanobis_layer:
             self.mahalanobis = MahalanobisLayer(d_in, mahalanobis_cov_decay)
 
+        self.distort_input = distort_inputs
+
     def forward(self, x):
-        x_enc = self.encoding_layers(x)
+        x_in = x + torch.randn_like(x) if self.distort_input else x
+        x_enc = self.encoding_layers(x_in)
         x_fit = self.decoding_layers(x_enc)
         if self.mahalanobis_layer:
             return self.mahalanobis(x, x_fit)
@@ -57,7 +61,7 @@ if __name__ == "__main__":
     x = torch.Tensor(torch.randn(N, D_in))
 
     # Construct our model by instantiating the class defined above
-    model = Autoencoder(D_in, H1, H2, H3, True, 0.001)
+    model = Autoencoder(D_in, H1, H2, H3, True, 0.001, True)
 
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
