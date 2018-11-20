@@ -9,26 +9,29 @@ from modules.mahalanobis import MahalanobisLayer
 
 class Autoencoder(nn.Module):
 
-    def __init__(self, d_in, h1, h2, h3, mahalanobis_layer=False,
+    def __init__(self, layer_dims, mahalanobis=False,
                  mahalanobis_cov_decay=0.1, distort_inputs=False):
         super(Autoencoder, self).__init__()
 
+        self.layer_dims = layer_dims
+
         self.encoding_layers = torch.nn.Sequential(
-            nn.Linear(d_in, h1),  # First hidden layer
-            nn.Tanh(),            # First hidden layer
-            nn.Linear(h1, h2)     # Compression layer (no non-linearity)
+            nn.Linear(layer_dims[0], layer_dims[1]),  # 1st hidden layer
+            nn.Tanh(),                                # 1st hidden layer
+            nn.Linear(layer_dims[1], layer_dims[2])   # Compression layer
         )
 
         self.decoding_layers = torch.nn.Sequential(
-            nn.Linear(h2, h3),    # Third hidden layer
-            nn.Tanh(),            # Third hidden layer
-            nn.Linear(h3, d_in)   # Output layer
+            nn.Linear(layer_dims[2], layer_dims[3]),  # 3rd hidden layer
+            nn.Tanh(),                                # 3d hidden layer
+            nn.Linear(layer_dims[3], layer_dims[4])   # Output layer
         )
 
-        self.mahalanobis_layer = mahalanobis_layer
+        self.mahalanobis = mahalanobis
 
-        if self.mahalanobis_layer:
-            self.mahalanobis = MahalanobisLayer(d_in, mahalanobis_cov_decay)
+        if mahalanobis:
+            self.mahalanobis_layer = MahalanobisLayer(layer_dims[0],
+                                                      mahalanobis_cov_decay)
 
         self.distort_input = distort_inputs
 
@@ -36,8 +39,8 @@ class Autoencoder(nn.Module):
         x_in = x + torch.randn_like(x) if self.distort_input else x
         x_enc = self.encoding_layers(x_in)
         x_fit = self.decoding_layers(x_enc)
-        if self.mahalanobis_layer:
-            return self.mahalanobis(x, x_fit)
+        if self.mahalanobis:
+            x_fit = self.mahalanobis_layer(x, x_fit)
         return x_fit
 
     def encode(self, x):
@@ -53,35 +56,32 @@ class Autoencoder(nn.Module):
 
 
 if __name__ == "__main__":
-    # N is batch size; D_in is input dimension (and thus output dimension);
-    # H1, H2 and H3 are hidden layer dimensions
-    N, D_in, H1, H2, H3 = 128, 10, 30, 3, 30
+    batch_size = 128
+    layer_dims = 10, 30, 5, 30, 10
 
     # Create random Tensors to hold inputs and outputs
-    x = torch.Tensor(torch.randn(N, D_in))
+    x = torch.Tensor(torch.randn(batch_size, layer_dims[0]))
 
     # Construct our model by instantiating the class defined above
-    model = Autoencoder(D_in, H1, H2, H3, True, 0.001, True)
+    model = Autoencoder(layer_dims, True, 0.001, True)
 
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # Also copy data to device, when training on real data this should be done for each mini-batch
+    # Copy data to device
     x = x.to(device)
 
     # Construct our loss function and an optimizer
-    #criterion = torch.nn.MSELoss(reduction='sum')
     criterion = nn.L1Loss()
-    #optimizer = torch.optim.Adam(model.parameters())
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0, nesterov=False)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0)
 
     for t in range(2000):
         # Forward pass: Compute predicted y by passing x to the model
         errors = model(x)
 
         # Compute and print loss
-        loss = criterion(errors, torch.zeros(errors.size(), device=device)) #x_fit.size(), device=device))
+        loss = criterion(errors, torch.zeros(errors.size(), device=device))
         print(t, loss.item())
 
         # Zero gradients, perform a backward pass, and update the weights.
@@ -92,13 +92,13 @@ if __name__ == "__main__":
         if model.mahalanobis_layer:
             with torch.no_grad():
                 x_fit = model.reconstruct(x)
-                model.mahalanobis.update(x, x_fit)
+                model.mahalanobis_layer.update(x, x_fit)
 
     print("Trained model on device: {}".format(device))
 
     print(errors)
     print(x)
     print(model.reconstruct(x))
-    if model.mahalanobis_layer:
-        print(model.mahalanobis.S)
-        print(model.mahalanobis.S_inv)
+    if model.mahalanobis:
+        print(model.mahalanobis_layer.S)
+        print(model.mahalanobis_layer.S_inv)

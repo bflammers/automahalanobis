@@ -46,39 +46,31 @@ def generate_loaders(X, labels, args, **kwargs):
 
     splits = [data_nrows - val_size - test_size, data_nrows - val_size]
     X_train, X_val, X_test = np.split(X, splits)
-
-    labels_split = dict((x, y) for x, y in zip(('train', 'val', 'test'),
-                                               np.split(labels, splits)))
-
-    # y values: arrays containing zeros
-    y_train = np.zeros(X_train.shape[0])
-    y_val = np.zeros(X_val.shape[0])
-    y_test = np.zeros(X_test.shape[0])
+    labels_train, labels_val, labels_test = np.split(labels, splits)
 
     # Pytorch data loaders
     train = data_utils.TensorDataset(torch.from_numpy(X_train),
-                                     torch.from_numpy(y_train))
+                                     torch.from_numpy(labels_train))
     train_loader = data_utils.DataLoader(train, batch_size=args.batch_size,
                                          shuffle=True, **kwargs)
 
     validation = data_utils.TensorDataset(torch.from_numpy(X_val),
-                                          torch.from_numpy(y_val))
+                                          torch.from_numpy(labels_val))
     val_loader = data_utils.DataLoader(validation, batch_size=args.batch_size,
                                        shuffle=False, **kwargs)
 
     test = data_utils.TensorDataset(torch.from_numpy(X_test),
-                                    torch.from_numpy(y_test))
+                                    torch.from_numpy(labels_test))
     test_loader = data_utils.DataLoader(test, batch_size=args.batch_size,
                                         shuffle=False, **kwargs)
 
-    return train_loader, val_loader, test_loader, labels_split
+    return train_loader, val_loader, test_loader
 
 
 def load_kdd_smtp(args, **kwargs):
 
     # Set args
-    args.dim_input = 3
-    args.hidden_layers = (10,2,10)
+    args.layer_dims = (3, 10, 2, 10, 3)
 
     # Load data
     X, labels = read_mat('./data/kdd_smtp/kdd_smtp.mat',
@@ -87,16 +79,15 @@ def load_kdd_smtp(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader, labels_split = \
+    train_loader, val_loader, test_loader = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, labels_split, args
+    return train_loader, val_loader, test_loader, args
 
 def load_kdd_http(args, **kwargs):
 
     # Set args
-    args.dim_input = 3
-    args.hidden_layers = (10, 2, 10)
+    args.layer_dims = (3, 10, 2, 10, 3)
 
     # Load data
     X, labels = read_mat('./data/kdd_http/kdd_http.mat',
@@ -105,16 +96,15 @@ def load_kdd_http(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader, labels_split = \
+    train_loader, val_loader, test_loader = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, labels_split, args
+    return train_loader, val_loader, test_loader, args
 
 def load_shuttle(args, **kwargs):
 
     # Set args
-    args.dim_input = 3
-    args.hidden_layers = (10, 2, 10)
+    args.layer_dims = (9, 20, 5, 20, 9)
 
     # Load data
     X, labels = read_mat('./data/shuttle/shuttle.mat',
@@ -123,16 +113,15 @@ def load_shuttle(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader, labels_split = \
+    train_loader, val_loader, test_loader = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, labels_split, args
+    return train_loader, val_loader, test_loader, args
 
 def load_forest_cover(args, **kwargs):
 
     # Set args
-    args.dim_input = 3
-    args.hidden_layers = (10, 2, 10)
+    args.layer_dims = (10, 20, 5, 20, 10)
 
     # Load data
     X, labels = read_mat('./data/forest_cover/forest_cover.mat',
@@ -141,10 +130,10 @@ def load_forest_cover(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader, labels_split = \
+    train_loader, val_loader, test_loader = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, labels_split, args
+    return train_loader, val_loader, test_loader, args
 
 
 def load_dataset(args, **kwargs):
@@ -171,10 +160,10 @@ def load_dataset(args, **kwargs):
 if __name__ == "__main__":
 
     from argparse import Namespace
-    data_args = Namespace(dataset_name='shuttle',
+    data_args = Namespace(dataset_name='forest_cover',
                           test_prop=0.2,
                           val_prop=0.2,
                           batch_size=128)
 
-    train_loader, val_loader, test_loader, labels, args = \
+    train_loader, val_loader, test_loader, args = \
         load_dataset(args=data_args)

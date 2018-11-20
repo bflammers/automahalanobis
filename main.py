@@ -4,6 +4,8 @@ import argparse
 
 from modules.autoencoder import Autoencoder
 from utils.dataloading import load_dataset
+from utils.tracking import Tracker
+from utils.experiment import test_performance
 
 parser = argparse.ArgumentParser(description='Automahalanobis experiment')
 
@@ -19,7 +21,7 @@ parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=100)
+parser.add_argument('--n_epochs', type=int, default=5)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--cuda', type=bool, default=True)
 parser.add_argument('--tensorboard', type=bool, default=False)
@@ -36,19 +38,13 @@ if args.tensorboard:
 if __name__ == '__main__':
 
     # Load data
-    train_loader, val_loader, test_loader, labels_split, model_args = \
+    train_loader, val_loader, test_loader, model_args = \
         load_dataset(args, **kwargs)
 
-    # Set hidden layer dimensions
-    H1, H2, H3 = 10, 2, 10
-
     # Construct our model by instantiating the class defined above
-    model = Autoencoder(model_args.dim_input, H1, H2, H3, args.mahalanobis,
+    model = Autoencoder(model_args.layer_dims, args.mahalanobis,
                         args.mahalanobis_cov_decay, args.distort_inputs)
     model.double()
-
-    from utils.tracking import tracker
-
 
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if args.cuda else "cpu")
@@ -62,16 +58,19 @@ if __name__ == '__main__':
 
     for k in range(1, args.n_epochs + 1):
 
-        for X_batch, y_batch in train_loader:
+        for X_batch, labels_batch in train_loader:
 
             # Copy data to device
-            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+            X_batch, labels_batch = X_batch.to(device), labels_batch.to(device)
 
             # Forward pass: Compute predicted y by passing x to the model
-            errors = model(X_batch)
+            out = model(X_batch)
+
+            # Construct y tensor
+            y_batch = torch.zeros_like(out) if model.mahalanobis else X_batch
 
             # Compute and print loss
-            loss = criterion(errors, y_batch)
+            loss = criterion(out, y_batch)
             print('Epoch: {}/{} -- Loss: {}'.format(k, args.n_epochs, loss.item()))
 
             # Zero gradients, perform a backward pass, and update the weights.
@@ -79,17 +78,25 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        writer.add_scalar('data/loss', loss.item(), k)
+            # Track performance
 
-        if model.mahalanobis_layer:
+            #performance = test_performance()
+            val_loader()
+
+        if args.tensorboard:
+            writer.add_scalar('data/loss', loss.item(), k)
+
+        if model.mahalanobis:
             with torch.no_grad():
                 X_fit = model.reconstruct(X_batch)
-                model.mahalanobis.update(X_batch, X_fit)
+                model.mahalanobis_layer.update(X_batch, X_fit)
 
     print("Trained model on device: {}".format(device))
 
-    print(model.mahalanobis.S)
-    print(model.mahalanobis.S_inv)
+    if model.mahalanobis:
+        print(model.mahalanobis_layer.S)
+        print(model.mahalanobis_layer.S_inv)
 
-    # Close tensorboard writer
-    writer.close()
+    if args.tensorboard:
+        # Close tensorboard writer
+        writer.close()

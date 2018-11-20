@@ -33,12 +33,12 @@ class Tracker:
             filewriter.writerow(['epoch', 'train_loss', 'val_loss',
                                  'top1_perc', 'top5_perc', 'top10_perc'])
 
-    def track(self, epoch, train_loss, val_loss, top1_perc, top5_perc,
-              top10_perc):
+    def track(self, epoch, train_loss, val_loss, top1_percent=0,
+              top5_percent=0, top10_percent=0):
 
         # Collect values in list
-        metrics = [epoch, train_loss, val_loss, top1_perc, top5_perc,
-                   top10_perc]
+        metrics = [epoch, train_loss, val_loss, top1_percent, top5_percent,
+                   top10_percent]
 
         # Append to csv file
         with open(self.dir + 'train_metrics.csv', 'a') as f:
