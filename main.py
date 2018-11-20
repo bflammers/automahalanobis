@@ -47,6 +47,9 @@ if __name__ == '__main__':
                         args.mahalanobis_cov_decay, args.distort_inputs)
     model.double()
 
+    from utils.tracking import tracker
+
+
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if args.cuda else "cpu")
     model.to(device)
