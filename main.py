@@ -5,35 +5,32 @@ import argparse
 from modules.autoencoder import Autoencoder
 from utils.dataloading import load_dataset
 from utils.tracking import Tracker
-from utils.experiment import test_performance
+from utils.experiment import validate
 
 parser = argparse.ArgumentParser(description='Automahalanobis experiment')
 
 # Autoencoder args
-parser.add_argument('--mahalanobis', type=bool, default=False)
+parser.add_argument('--mahalanobis', type=bool, default=True)
 parser.add_argument('--mahalanobis_cov_decay', type=float, default=0.1)
 parser.add_argument('--distort_inputs', type=bool, default=False)
+parser.add_argument('--distort_targets', type=bool, default=False)
 
 # Dataset args
-parser.add_argument('--dataset_name', type=str, default='kdd_smtp',
+parser.add_argument('--dataset_name', type=str, default='kdd_http',
                     help='name of the dataset')
 parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=5)
+parser.add_argument('--n_epochs', type=int, default=30)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--cuda', type=bool, default=True)
-parser.add_argument('--tensorboard', type=bool, default=False)
+parser.add_argument('--tensorboard', type=bool, default=True)
 
 # Collect args and kwargs
 args = parser.parse_args()
 args.cuda = args.cuda if torch.cuda.is_available() else False
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-
-if args.tensorboard:
-    from tensorboardX import SummaryWriter
-    writer = SummaryWriter()
 
 if __name__ == '__main__':
 
@@ -49,6 +46,14 @@ if __name__ == '__main__':
     # Select device to train model on and copy model to device
     device = torch.device("cuda:0" if args.cuda else "cpu")
     model.to(device)
+
+    # Instantiate tracker
+    args.model_name='autoencoder'
+    tracker = Tracker(args)
+
+    if args.tensorboard:
+        from tensorboardX import SummaryWriter
+        writer = SummaryWriter(log_dir=tracker.dir+'tensorboard/')
 
     # Construct our loss function and an optimizer
     # criterion = torch.nn.MSELoss(reduction='sum')
@@ -78,17 +83,20 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        for i X_val, labels_val in val_loader:
-            # Track performance
-            out_val = model(X_val)
-            perf = [test_performance(labels_val, out_val, x) for
-
-            val_loader()
-
         if args.tensorboard:
             writer.add_scalar('data/loss', loss.item(), k)
 
         if model.mahalanobis:
+
+            # Evaluate and track performance
+            top1, top5, top10 = validate(val_loader, model, device)
+            tracker.track(k, loss.item(), 0, top1, top5, top10)
+
+            if args.tensorboard:
+                writer.add_scalar('data/top1', top1, k)
+                writer.add_scalar('data/top1', top5, k)
+                writer.add_scalar('data/top1', top10, k)
+
             with torch.no_grad():
                 X_fit = model.reconstruct(X_batch)
                 model.mahalanobis_layer.update(X_batch, X_fit)

@@ -10,12 +10,69 @@ def test_performance(anomalies, scores, percentage):
     ordered_anomalies = anomalies[ordering.type(torch.LongTensor)]
 
     # Number of observations to include in top
-    n = anomalies.shape[0]
-    n_top = math.ceil(n * percentage / 100)
+    n_top = math.ceil(anomalies.shape[0] * percentage / 100)
 
-    return torch.sum(ordered_anomalies[:n_top]).item() / n
+    return torch.sum(ordered_anomalies[:n_top]).item() / torch.sum(anomalies)
+
+class FillableArray:
+
+    def __repr__(self):
+        return self.X.__str__()
+
+    def __init__(self, n, tensor=False):
+        self.n = n
+        self.X = torch.Tensor(torch.zeros(n)) if tensor else np.zeros(n)
+        self.i = 0
+
+    def fill(self, x):
+        stop_ind = self.i + len(x)
+        assert self.n >= stop_ind
+        self.X[self.i:stop_ind] = x.flatten()
+        self.i = stop_ind
+
+
+def validate(data_loader, model, device):
+
+    nrow = len(data_loader.dataset)
+    anomalies=FillableArray(nrow, tensor=True)
+    scores=FillableArray(nrow, tensor=True)
+
+    for X_val, labels_val in data_loader:
+        X_val, labels_val = X_val.to(device), labels_val.to(device)
+        anomalies.fill(labels_val)
+        scores.fill(model(X_val))
+
+    return (test_performance(anomalies.X, scores.X, x).item() for x in [1,5,10])
+
 
 if __name__=='__main__':
+
+    from utils.dataloading import load_dataset
+    from argparse import Namespace
+    from modules.autoencoder import Autoencoder
+
+    data_args = Namespace(dataset_name='kdd_smtp',
+                          test_prop=0.2,
+                          val_prop=0.2,
+                          batch_size=128)
+
+    train_loader, val_loader, test_loader, model_args = \
+        load_dataset(args=data_args)
+
+    args = Namespace(mahalanobis=True,
+                     mahalanobis_cov_decay=0.9,
+                     distort_inputs=False)
+
+    ae = Autoencoder(model_args.layer_dims, args.mahalanobis,
+                     args.mahalanobis_cov_decay, args.distort_inputs)
+    ae.double()
+    device = torch.device("cuda:0" if False else "cpu")
+    ae.to(device)
+
+    test = validate(train_loader, ae, device)
+
+
+
     n = 10000
     anomalies = torch.from_numpy(np.random.choice([0,1],size=n))
     scores = torch.from_numpy(np.random.uniform(0,5,size=n))
