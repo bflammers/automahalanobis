@@ -4,6 +4,7 @@ import re
 import os
 import csv
 import json
+from tensorboardX import SummaryWriter
 
 class Tracker:
 
@@ -33,6 +34,16 @@ class Tracker:
             filewriter.writerow(['epoch', 'train_loss', 'val_loss',
                                  'top1_perc', 'top5_perc', 'top10_perc'])
 
+        # Tensorboard writer
+        self.tensorboard=args.tensorboard
+        if self.tensorboard:
+            self.writer = SummaryWriter(log_dir=self.dir + 'tensorboard/')
+            self.k = 0  # Counter for tensorboard events
+
+    def __del__(self):
+        if self.tensorboard:
+            self.writer.close()
+
     def track(self, epoch, train_loss, val_loss, top1_percent=0,
               top5_percent=0, top10_percent=0):
 
@@ -45,7 +56,14 @@ class Tracker:
             writer = csv.writer(f)
             writer.writerow(metrics)
 
-
+        # Write tensorboard events
+        if self.tensorboard:
+            self.writer.add_scalar('data/train_loss', train_loss, self.k)
+            self.writer.add_scalar('data/val_loss', val_loss, self.k)
+            self.writer.add_scalar('data/top1_percent', top1_percent, self.k)
+            self.writer.add_scalar('data/top5_percent', top5_percent, self.k)
+            self.writer.add_scalar('data/top10_percent', top10_percent, self.k)
+            self.k += 1
 
 if __name__=='__main__':
 
@@ -54,7 +72,8 @@ if __name__=='__main__':
                      test_prop=0.2,
                      val_prop=0.2,
                      batch_size=128,
-                     model_name='autoencoder')
+                     model_name='autoencoder',
+                     tensorboard=True)
 
     t = Tracker(args)
 

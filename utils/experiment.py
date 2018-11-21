@@ -3,16 +3,16 @@ import numpy as np
 import math
 import torch
 
-def test_performance(anomalies, scores, percentage):
+def performance(anomalies, scores, percentage):
 
     # Order anomalies (binary vector) by the anomaly score in descending order
     _, ordering = torch.sort(scores, descending=True)
     ordered_anomalies = anomalies[ordering.type(torch.LongTensor)]
 
     # Number of observations to include in top
-    n_top = math.ceil(anomalies.shape[0] * percentage / 100)
+    n_top = math.ceil(len(anomalies) * percentage / 100)
 
-    return torch.sum(ordered_anomalies[:n_top]).item() / torch.sum(anomalies)
+    return torch.sum(ordered_anomalies[:n_top]) / torch.sum(anomalies)
 
 class FillableArray:
 
@@ -31,18 +31,35 @@ class FillableArray:
         self.i = stop_ind
 
 
-def validate(data_loader, model, device):
+def validate(data_loader, model, criterion, device):
 
     nrow = len(data_loader.dataset)
     anomalies=FillableArray(nrow, tensor=True)
     scores=FillableArray(nrow, tensor=True)
+    loss=0
 
-    for X_val, labels_val in data_loader:
+    for i, (X_val, labels_val) in enumerate(data_loader):
+
+        # Copy to device
         X_val, labels_val = X_val.to(device), labels_val.to(device)
-        anomalies.fill(labels_val)
-        scores.fill(model(X_val))
 
-    return (test_performance(anomalies.X, scores.X, x).item() for x in [1,5,10])
+        # Calculate output of model: reconstructions or Mahalanobis distance
+        out = model(X_val)
+
+        # Construct y tensor and calculate loss
+        y_val = torch.zeros_like(out) if model.mahalanobis else X_val
+        loss += criterion(out, y_val)
+
+        # Fill anomaly and score tensors to compute performance on full set
+        anomalies.fill(labels_val)
+        scores.fill(out)
+
+    loss /= i + 1
+    top1 = performance(anomalies.X, scores.X, 1).item()
+    top5 = performance(anomalies.X, scores.X, 5).item()
+    top10 = performance(anomalies.X, scores.X, 10).item()
+
+    return loss.item(), top1, top5, top10
 
 
 if __name__=='__main__':

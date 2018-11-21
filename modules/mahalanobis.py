@@ -27,8 +27,8 @@ class MahalanobisLayer(nn.Module):
         x -= torch.mean(x, dim=0)
         return 1 / (x.size(0) - 1) * x.t().mm(x)
 
-    def update(self, x, x_fit):
-        delta = x - x_fit
+    def update(self, X, X_fit):
+        delta = X - X_fit
         self.S = (1 - self.decay) * self.S + self.decay * self.cov(delta)
         self.S_inv = torch.pinverse(self.S)
 

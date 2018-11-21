@@ -16,13 +16,13 @@ parser.add_argument('--distort_inputs', type=bool, default=False)
 parser.add_argument('--distort_targets', type=bool, default=False)
 
 # Dataset args
-parser.add_argument('--dataset_name', type=str, default='kdd_http',
+parser.add_argument('--dataset_name', type=str, default='forest_cover',
                     help='name of the dataset')
 parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=30)
+parser.add_argument('--n_epochs', type=int, default=500)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--cuda', type=bool, default=True)
 parser.add_argument('--tensorboard', type=bool, default=True)
@@ -38,28 +38,26 @@ if __name__ == '__main__':
     train_loader, val_loader, test_loader, model_args = \
         load_dataset(args, **kwargs)
 
-    # Construct our model by instantiating the class defined above
+    # Construct model, cast to double and copy to device
     model = Autoencoder(model_args.layer_dims, args.mahalanobis,
                         args.mahalanobis_cov_decay, args.distort_inputs)
     model.double()
 
-    # Select device to train model on and copy model to device
+    # Determine device and copy model
     device = torch.device("cuda:0" if args.cuda else "cpu")
     model.to(device)
 
     # Instantiate tracker
     args.model_name='autoencoder'
-    tracker = Tracker(args)
-
-    if args.tensorboard:
-        from tensorboardX import SummaryWriter
-        writer = SummaryWriter(log_dir=tracker.dir+'tensorboard/')
+    tracker=Tracker(args)
 
     # Construct our loss function and an optimizer
     # criterion = torch.nn.MSELoss(reduction='sum')
     criterion = torch.nn.L1Loss()
     optimizer = torch.optim.Adam(model.parameters())
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0, nesterov=False)
+
+    print(validate(val_loader, model, criterion, device))
 
     for k in range(1, args.n_epochs + 1):
 
@@ -83,20 +81,13 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        if args.tensorboard:
-            writer.add_scalar('data/loss', loss.item(), k)
+        # Performance metrics and tracking
+        val_loss, top1, top5, top10 = \
+            validate(val_loader, model, criterion, device)
+        tracker.track(k, loss, val_loss, top1, top5, top10)
+
 
         if model.mahalanobis:
-
-            # Evaluate and track performance
-            top1, top5, top10 = validate(val_loader, model, device)
-            tracker.track(k, loss.item(), 0, top1, top5, top10)
-
-            if args.tensorboard:
-                writer.add_scalar('data/top1', top1, k)
-                writer.add_scalar('data/top1', top5, k)
-                writer.add_scalar('data/top1', top10, k)
-
             with torch.no_grad():
                 X_fit = model.reconstruct(X_batch)
                 model.mahalanobis_layer.update(X_batch, X_fit)
@@ -106,7 +97,3 @@ if __name__ == '__main__':
     if model.mahalanobis:
         print(model.mahalanobis_layer.S)
         print(model.mahalanobis_layer.S_inv)
-
-    if args.tensorboard:
-        # Close tensorboard writer
-        writer.close()

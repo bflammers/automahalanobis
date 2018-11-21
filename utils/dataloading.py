@@ -8,11 +8,10 @@ from scipy.io import loadmat
 
 class Scaler:
 
-    def __init__(self, X_train):
-
+    def __init__(self, X):
         # Calculate mean and standard deviation of train
-        self.mean_vec = np.mean(X_train, axis=0)
-        self.sd_vec = np.std(X_train, axis=0)
+        self.mean_vec = torch.mean(X_train, dim=0)
+        self.sd_vec = torch.std(X_train, dim=0)
 
     def normalize(self, X):
         return (X - self.mean_vec) / self.sd_vec
@@ -61,19 +60,22 @@ def generate_loaders(X, labels, args, **kwargs):
     labels_train, labels_val, labels_test = np.split(labels, splits)
 
     # Pytorch data loaders
-    train = data_utils.TensorDataset(torch.from_numpy(X_train),
-                                     torch.from_numpy(labels_train))
-    train_loader = data_utils.DataLoader(train, batch_size=args.batch_size,
+    train = data_utils.TensorDataset(torch.from_numpy(X_train).double(),
+                                     torch.from_numpy(labels_train).double())
+    train_loader = data_utils.DataLoader(train,
+                                         batch_size=args.batch_size,
                                          shuffle=True, **kwargs)
 
-    validation = data_utils.TensorDataset(torch.from_numpy(X_val),
-                                          torch.from_numpy(labels_val))
-    val_loader = data_utils.DataLoader(validation, batch_size=args.batch_size,
+    validation = data_utils.TensorDataset(torch.from_numpy(X_val).double(),
+                                          torch.from_numpy(labels_val).double())
+    val_loader = data_utils.DataLoader(validation,
+                                       batch_size=args.batch_size,
                                        shuffle=False, **kwargs)
 
-    test = data_utils.TensorDataset(torch.from_numpy(X_test),
-                                    torch.from_numpy(labels_test))
-    test_loader = data_utils.DataLoader(test, batch_size=args.batch_size,
+    test = data_utils.TensorDataset(torch.from_numpy(X_test).double(),
+                                    torch.from_numpy(labels_test).double())
+    test_loader = data_utils.DataLoader(test,
+                                        batch_size=args.batch_size,
                                         shuffle=False, **kwargs)
 
     return train_loader, val_loader, test_loader
