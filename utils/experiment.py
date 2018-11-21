@@ -16,7 +16,7 @@ def test_performance(anomalies, scores, percentage):
     return torch.sum(ordered_anomalies[:n_top]).item() / n
 
 if __name__=='__main__':
-    n = 1000000
+    n = 10000
     anomalies = torch.from_numpy(np.random.choice([0,1],size=n))
     scores = torch.from_numpy(np.random.uniform(0,5,size=n))
     percentages = [1,5,10,20]

@@ -6,6 +6,18 @@ import numpy as np
 import h5py
 from scipy.io import loadmat
 
+class Scaler:
+
+    def __init__(self, X_train):
+
+        # Calculate mean and standard deviation of train
+        self.mean_vec = np.mean(X_train, axis=0)
+        self.sd_vec = np.std(X_train, axis=0)
+
+    def normalize(self, X):
+        return (X - self.mean_vec) / self.sd_vec
+
+
 def np_shuffle_arrays(a, b):
     assert len(a) == len(b)
     p = np.random.permutation(len(a))
@@ -158,6 +170,16 @@ def load_dataset(args, **kwargs):
     return data_tuple
 
 if __name__ == "__main__":
+
+
+    X_train = np.random.randn(20,5)
+    scaler = Scaler(X_train)
+    X_scaled = scaler.normalize(X_train)
+
+    np.testing.assert_almost_equal(np.array([0,0,0,0,0]),
+                                   np.mean(X_scaled, axis=0))
+    np.testing.assert_almost_equal(np.array([1, 1, 1, 1, 1]),
+                                   np.std(X_scaled, axis=0))
 
     from argparse import Namespace
     data_args = Namespace(dataset_name='forest_cover',

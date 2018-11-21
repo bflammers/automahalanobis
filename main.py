@@ -78,9 +78,11 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
+        for i X_val, labels_val in val_loader:
             # Track performance
+            out_val = model(X_val)
+            perf = [test_performance(labels_val, out_val, x) for
 
-            #performance = test_performance()
             val_loader()
 
         if args.tensorboard:
