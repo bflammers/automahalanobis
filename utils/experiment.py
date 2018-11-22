@@ -3,6 +3,45 @@ import numpy as np
 import math
 import torch
 
+def train_model(model, criterion, optimizer, train_loader, val_loader, tracker,
+                args, device):
+
+    for epoch in range(1, args.n_epochs + 1):
+
+        for X_batch, labels_batch in train_loader:
+
+            # Copy data to device
+            X_batch, labels_batch = X_batch.to(device), labels_batch.to(device)
+
+            # Forward pass: Compute predicted y by passing x to the model
+            out = model(X_batch)
+
+            # Construct y tensor
+            y_batch = torch.zeros_like(out) if model.mahalanobis else X_batch
+
+            # Compute and print loss
+            loss = criterion(out, y_batch)
+            print('Epoch: {}/{} -- Loss: {}'.format(epoch, args.n_epochs,
+                                                    loss.item()))
+
+            # Zero gradients, perform a backward pass, and update the weights.
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        # Performance metrics and tracking
+        val_loss, top1, top5, top10 = \
+            validate(val_loader, model, criterion, device)
+        tracker.track(epoch, loss, val_loss, top1, top5, top10)
+
+        if model.mahalanobis:
+            with torch.no_grad():
+                X_fit = model.reconstruct(X_batch)
+                model.mahalanobis_layer.update(X_batch, X_fit)
+
+    return model
+
+
 def performance(anomalies, scores, percentage):
 
     # Order anomalies (binary vector) by the anomaly score in descending order
@@ -14,29 +53,28 @@ def performance(anomalies, scores, percentage):
 
     return torch.sum(ordered_anomalies[:n_top]) / torch.sum(anomalies)
 
-class FillableArray:
-
-    def __repr__(self):
-        return self.X.__str__()
-
-    def __init__(self, n, tensor=False):
-        self.n = n
-        self.X = torch.Tensor(torch.zeros(n)) if tensor else np.zeros(n)
-        self.i = 0
-
-    def fill(self, x):
-        stop_ind = self.i + len(x)
-        assert self.n >= stop_ind
-        self.X[self.i:stop_ind] = x.flatten()
-        self.i = stop_ind
-
-
 def validate(data_loader, model, criterion, device):
 
+    class FillableArray:
+
+        def __repr__(self):
+            return self.X.__str__()
+
+        def __init__(self, n, tensor=False):
+            self.n = n
+            self.X = torch.Tensor(torch.zeros(n)) if tensor else np.zeros(n)
+            self.i = 0
+
+        def fill(self, x):
+            stop_ind = self.i + len(x)
+            assert self.n >= stop_ind
+            self.X[self.i:stop_ind] = x.flatten()
+            self.i = stop_ind
+
     nrow = len(data_loader.dataset)
-    anomalies=FillableArray(nrow, tensor=True)
-    scores=FillableArray(nrow, tensor=True)
-    loss=0
+    anomalies = FillableArray(nrow, tensor=True)
+    scores = FillableArray(nrow, tensor=True)
+    loss  =0
 
     for i, (X_val, labels_val) in enumerate(data_loader):
 
@@ -60,7 +98,6 @@ def validate(data_loader, model, criterion, device):
     top10 = performance(anomalies.X, scores.X, 10).item()
 
     return loss.item(), top1, top5, top10
-
 
 if __name__=='__main__':
 
@@ -87,8 +124,6 @@ if __name__=='__main__':
     ae.to(device)
 
     test = validate(train_loader, ae, device)
-
-
 
     n = 10000
     anomalies = torch.from_numpy(np.random.choice([0,1],size=n))

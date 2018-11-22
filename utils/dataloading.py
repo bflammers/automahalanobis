@@ -9,9 +9,12 @@ from scipy.io import loadmat
 class Scaler:
 
     def __init__(self, X):
+        # Numpy array input to tensor
+        X = X.from_numpy().double()
+
         # Calculate mean and standard deviation of train
-        self.mean_vec = torch.mean(X_train, dim=0)
-        self.sd_vec = torch.std(X_train, dim=0)
+        self.mean_vec = torch.mean(X, dim=0)
+        self.sd_vec = torch.std(X, dim=0)
 
     def normalize(self, X):
         return (X - self.mean_vec) / self.sd_vec
