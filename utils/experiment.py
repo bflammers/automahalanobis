@@ -32,15 +32,15 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, scaler,
             loss.backward()
             optimizer.step()
 
+            if model.mahalanobis:
+                with torch.no_grad():
+                    X_fit = model.reconstruct(X_batch)
+                    model.mahalanobis_layer.update(X_batch, X_fit)
+
         # Performance metrics and tracking
         val_loss, top1, top5, top10 = \
-            validate(val_loader, model, criterion, device)
+            validate(val_loader, model, criterion, scaler, device)
         tracker.track(epoch, loss, val_loss, top1, top5, top10)
-
-        if model.mahalanobis:
-            with torch.no_grad():
-                X_fit = model.reconstruct(X_batch)
-                model.mahalanobis_layer.update(X_batch, X_fit)
 
     return model
 
@@ -56,7 +56,7 @@ def performance(anomalies, scores, percentage):
 
     return torch.sum(ordered_anomalies[:n_top]) / torch.sum(anomalies)
 
-def validate(data_loader, model, criterion, device):
+def validate(data_loader, model, criterion, scaler, device):
 
     class FillableArray:
 
@@ -83,6 +83,9 @@ def validate(data_loader, model, criterion, device):
 
         # Copy to device
         X_val, labels_val = X_val.to(device), labels_val.to(device)
+
+        # Scale X
+        X_val = scaler.normalize(X_val)
 
         # Calculate output of model: reconstructions or Mahalanobis distance
         out = model(X_val)

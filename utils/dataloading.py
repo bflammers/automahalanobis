@@ -16,6 +16,10 @@ class Scaler:
         self.mean_vec = torch.mean(x, dim=0)
         self.sd_vec = torch.std(x, dim=0)
 
+    def to(self, device):
+        self.mean_vec = self.mean_vec.to(device)
+        self.sd_vec = self.sd_vec.to(device)
+
     def normalize(self, x):
         return (x - self.mean_vec) / self.sd_vec
 

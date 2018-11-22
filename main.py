@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description='Automahalanobis experiment')
 
 # Autoencoder args
 parser.add_argument('--mahalanobis', type=bool, default=True)
-parser.add_argument('--mahalanobis_cov_decay', type=float, default=0.1)
+parser.add_argument('--mahalanobis_cov_decay', type=float, default=1E-4)
 parser.add_argument('--distort_inputs', type=bool, default=False)
 parser.add_argument('--distort_targets', type=bool, default=False)
 
@@ -22,7 +22,7 @@ parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=5)
+parser.add_argument('--n_epochs', type=int, default=500)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--mseloss', type=bool, default=False,
                     help='boolean whether to use mse loss (True) or L1 loss')
@@ -53,9 +53,10 @@ if __name__ == '__main__':
                         args.mahalanobis_cov_decay, args.distort_inputs)
     model.double()
 
-    # Determine device and copy model
+    # Determine device and copy model and scaler
     device = torch.device("cuda:0" if args.cuda else "cpu")
     model.to(device)
+    scaler.to(device)
 
     # Instantiate tracker
     tracker = Tracker(args)
