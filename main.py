@@ -45,7 +45,7 @@ args.model_name += '-distorttargets' if args.distort_targets else ''
 if __name__ == '__main__':
 
     # Load data
-    train_loader, val_loader, test_loader, model_args = \
+    train_loader, val_loader, test_loader, scaler, model_args = \
         load_dataset(args, **kwargs)
 
     # Construct model and cast to double
@@ -75,6 +75,6 @@ if __name__ == '__main__':
 
     # Train the model
     model = train_model(model, criterion, optimizer, train_loader, val_loader,
-                        tracker, args, device)
+                        scaler, tracker, args, device)
 
     print("Trained model on device: {}".format(device))

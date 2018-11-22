@@ -3,8 +3,8 @@ import numpy as np
 import math
 import torch
 
-def train_model(model, criterion, optimizer, train_loader, val_loader, tracker,
-                args, device):
+def train_model(model, criterion, optimizer, train_loader, val_loader, scaler,
+                tracker, args, device):
 
     for epoch in range(1, args.n_epochs + 1):
 
@@ -12,6 +12,9 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, tracker,
 
             # Copy data to device
             X_batch, labels_batch = X_batch.to(device), labels_batch.to(device)
+
+            # Scale X
+            X_batch = scaler.normalize(X_batch)
 
             # Forward pass: Compute predicted y by passing x to the model
             out = model(X_batch)

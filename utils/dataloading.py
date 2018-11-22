@@ -8,16 +8,16 @@ from scipy.io import loadmat
 
 class Scaler:
 
-    def __init__(self, X):
+    def __init__(self, x):
         # Numpy array input to tensor
-        X = X.from_numpy().double()
+        x = torch.from_numpy(x).double()
 
         # Calculate mean and standard deviation of train
-        self.mean_vec = torch.mean(X, dim=0)
-        self.sd_vec = torch.std(X, dim=0)
+        self.mean_vec = torch.mean(x, dim=0)
+        self.sd_vec = torch.std(x, dim=0)
 
-    def normalize(self, X):
-        return (X - self.mean_vec) / self.sd_vec
+    def normalize(self, x):
+        return (x - self.mean_vec) / self.sd_vec
 
 
 def np_shuffle_arrays(a, b):
@@ -62,6 +62,9 @@ def generate_loaders(X, labels, args, **kwargs):
     X_train, X_val, X_test = np.split(X, splits)
     labels_train, labels_val, labels_test = np.split(labels, splits)
 
+    # Fit scaler
+    scaler = Scaler(X_train)
+
     # Pytorch data loaders
     train = data_utils.TensorDataset(torch.from_numpy(X_train).double(),
                                      torch.from_numpy(labels_train).double())
@@ -81,7 +84,7 @@ def generate_loaders(X, labels, args, **kwargs):
                                         batch_size=args.batch_size,
                                         shuffle=False, **kwargs)
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader, test_loader, scaler
 
 
 def load_kdd_smtp(args, **kwargs):
@@ -96,10 +99,10 @@ def load_kdd_smtp(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader = \
+    train_loader, val_loader, test_loader, scaler = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, args
+    return train_loader, val_loader, test_loader, scaler, args
 
 def load_kdd_http(args, **kwargs):
 
@@ -113,10 +116,10 @@ def load_kdd_http(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader = \
+    train_loader, val_loader, test_loader, scaler = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, args
+    return train_loader, val_loader, test_loader, scaler, args
 
 def load_shuttle(args, **kwargs):
 
@@ -130,10 +133,10 @@ def load_shuttle(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader = \
+    train_loader, val_loader, test_loader, scaler = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, args
+    return train_loader, val_loader, test_loader, scaler, args
 
 def load_forest_cover(args, **kwargs):
 
@@ -147,10 +150,10 @@ def load_forest_cover(args, **kwargs):
     # Preprocessing
 
     # Split data and generate the data loaders
-    train_loader, val_loader, test_loader = \
+    train_loader, val_loader, test_loader, scaler = \
         generate_loaders(X, labels, args, **kwargs)
 
-    return train_loader, val_loader, test_loader, args
+    return train_loader, val_loader, test_loader, scaler, args
 
 
 def load_dataset(args, **kwargs):
@@ -192,5 +195,5 @@ if __name__ == "__main__":
                           val_prop=0.2,
                           batch_size=128)
 
-    train_loader, val_loader, test_loader, args = \
+    train_loader, val_loader, test_loader, scaler, args= \
         load_dataset(args=data_args)
