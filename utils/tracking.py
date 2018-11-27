@@ -32,7 +32,8 @@ class Tracker:
         with open(self.dir + 'train_metrics.csv', 'w') as file:
             filewriter = csv.writer(file, delimiter=';')
             filewriter.writerow(['epoch', 'train_loss', 'val_loss',
-                                 'top1_perc', 'top5_perc', 'top10_perc'])
+                                 'top1_percent', 'top5_percent',
+                                 'top10_percent', 'top25_percent'])
 
         # Tensorboard writer
         self.tensorboard=args.tensorboard
@@ -45,11 +46,11 @@ class Tracker:
             self.writer.close()
 
     def track(self, epoch, train_loss, val_loss, top1_percent=0,
-              top5_percent=0, top10_percent=0):
+              top5_percent=0, top10_percent=0, top25_percent=0):
 
         # Collect values in list
         metrics = [epoch, train_loss, val_loss, top1_percent, top5_percent,
-                   top10_percent]
+                   top10_percent, top25_percent]
 
         # Append to csv file
         with open(self.dir + 'train_metrics.csv', 'a') as f:
@@ -63,6 +64,7 @@ class Tracker:
             self.writer.add_scalar('data/top1_percent', top1_percent, self.k)
             self.writer.add_scalar('data/top5_percent', top5_percent, self.k)
             self.writer.add_scalar('data/top10_percent', top10_percent, self.k)
+            self.writer.add_scalar('data/top25_percent', top25_percent, self.k)
             self.k += 1
 
 if __name__=='__main__':

@@ -6,6 +6,7 @@ import numpy as np
 import h5py
 from scipy.io import loadmat
 
+
 class Scaler:
 
     def __init__(self, x):
@@ -28,6 +29,7 @@ def np_shuffle_arrays(a, b):
     assert len(a) == len(b)
     p = np.random.permutation(len(a))
     return a[p], b[p]
+
 
 def read_mat(path: str, transpose=True, print_dim=False):
 
@@ -52,6 +54,7 @@ def read_mat(path: str, transpose=True, print_dim=False):
         print(' labels: {}'.format(labels.shape))
 
     return X, labels
+
 
 def generate_loaders(X, labels, args, **kwargs):
 
@@ -108,6 +111,7 @@ def load_kdd_smtp(args, **kwargs):
 
     return train_loader, val_loader, test_loader, scaler, args
 
+
 def load_kdd_http(args, **kwargs):
 
     # Set args
@@ -125,6 +129,7 @@ def load_kdd_http(args, **kwargs):
 
     return train_loader, val_loader, test_loader, scaler, args
 
+
 def load_shuttle(args, **kwargs):
 
     # Set args
@@ -141,6 +146,7 @@ def load_shuttle(args, **kwargs):
         generate_loaders(X, labels, args, **kwargs)
 
     return train_loader, val_loader, test_loader, scaler, args
+
 
 def load_forest_cover(args, **kwargs):
 
@@ -181,10 +187,10 @@ def load_dataset(args, **kwargs):
         raise Exception('Wrong name of the dataset!')
     return data_tuple
 
+
 if __name__ == "__main__":
 
-
-    X_train = np.random.randn(20,5)
+    X_train = np.random.randn(20, 5)
     scaler = Scaler(X_train)
     X_scaled = scaler.normalize(X_train)
 

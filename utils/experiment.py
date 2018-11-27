@@ -38,11 +38,11 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, scaler,
                     model.mahalanobis_layer.update(X_batch, X_fit)
 
         # Performance metrics and tracking
-        val_loss, top1, top5, top10 = \
+        val_loss, top1, top5, top10, top25 = \
             validate(val_loader, model, criterion, scaler, device)
-        tracker.track(epoch, loss, val_loss, top1, top5, top10)
+        tracker.track(epoch, loss, val_loss, top1, top5, top10, top25)
 
-    return model
+    return model, epoch
 
 
 def performance(anomalies, scores, percentage):
@@ -102,8 +102,9 @@ def validate(data_loader, model, criterion, scaler, device):
     top1 = performance(anomalies.X, scores.X, 1).item()
     top5 = performance(anomalies.X, scores.X, 5).item()
     top10 = performance(anomalies.X, scores.X, 10).item()
+    top25 = performance(anomalies.X, scores.X, 25).item()
 
-    return loss.item(), top1, top5, top10
+    return loss.item(), top1, top5, top10, top25
 
 if __name__=='__main__':
 
@@ -116,7 +117,7 @@ if __name__=='__main__':
                           val_prop=0.2,
                           batch_size=128)
 
-    train_loader, val_loader, test_loader, model_args = \
+    train_loader, val_loader, test_loader, scaler, model_args = \
         load_dataset(args=data_args)
 
     args = Namespace(mahalanobis=True,
@@ -129,17 +130,5 @@ if __name__=='__main__':
     device = torch.device("cuda:0" if False else "cpu")
     ae.to(device)
 
-    test = validate(train_loader, ae, device)
-
-    n = 10000
-    anomalies = torch.from_numpy(np.random.choice([0,1],size=n))
-    scores = torch.from_numpy(np.random.uniform(0,5,size=n))
-    percentages = [1,5,10,20]
-
-    # Order anomalies (binary vector) by the anomaly score in descending order
-    _, ordering = torch.sort(scores, descending=True)
-    ordered_anomalies = anomalies[ordering.type(torch.LongTensor)]
-
-    results = [test_performance(anomalies, scores, x) for x in percentages]
-
-    np.testing.assert_allclose(results, [0.005, 0.025, 0.05, 0.1], rtol=0.3)
+    criterion = torch.nn.L1Loss()
+    test = validate(train_loader, ae, criterion, scaler, device)

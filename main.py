@@ -22,10 +22,8 @@ parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=500)
+parser.add_argument('--n_epochs', type=int, default=5)
 parser.add_argument('--batch_size', type=int, default=128)
-parser.add_argument('--mseloss', type=bool, default=False,
-                    help='boolean whether to use mse loss (True) or L1 loss')
 parser.add_argument('--adam', type=bool, default=True,
                     help='boolean whether to use adam optimizer (True) or SGD with momentum')
 parser.add_argument('--cuda', type=bool, default=True)
@@ -62,10 +60,7 @@ if __name__ == '__main__':
     tracker = Tracker(args)
 
     # Construct loss function
-    if args.mseloss:
-        criterion = torch.nn.MSELoss(reduction='sum')
-    else:
-        criterion = torch.nn.L1Loss()
+    criterion = torch.nn.L1Loss()
 
     # Construct optimizer
     if args.adam:
@@ -75,7 +70,18 @@ if __name__ == '__main__':
                                     nesterov=False)
 
     # Train the model
-    model = train_model(model, criterion, optimizer, train_loader, val_loader,
-                        scaler, tracker, args, device)
+    model, epoch = train_model(model, criterion, optimizer, train_loader,
+                               val_loader, scaler, tracker, args, device)
 
     print("Trained model on device: {}".format(device))
+
+    state = {
+        'epoch': epoch,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }
+    torch.save(state, tracker.dir+'model_state')
+
+    # state = torch.load()
+    # model.load_state_dict(state['state_dict'])
+    # optimizer.load_state_dict(state['optimizer'])
