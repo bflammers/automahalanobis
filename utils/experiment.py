@@ -6,6 +6,11 @@ import torch
 def train_model(model, criterion, optimizer, train_loader, val_loader, scaler,
                 tracker, args, device):
 
+    # Performance metrics and tracking
+    val_loss, top1, top5, top10, top25 = \
+        validate(val_loader, model, criterion, scaler, device)
+    tracker.track(0, 0, val_loss, top1, top5, top10, top25)
+
     for epoch in range(1, args.n_epochs + 1):
 
         for X_batch, labels_batch in train_loader:

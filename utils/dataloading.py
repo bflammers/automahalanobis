@@ -94,7 +94,7 @@ def generate_loaders(X, labels, args, **kwargs):
     return train_loader, val_loader, test_loader, scaler
 
 
-def load_kdd_smtp(args, **kwargs):
+def load_kdd_smtp(args, as_numpy, **kwargs):
 
     # Set args
     args.layer_dims = (3, 10, 2, 10, 3)
@@ -103,7 +103,8 @@ def load_kdd_smtp(args, **kwargs):
     X, labels = read_mat('./data/kdd_smtp/kdd_smtp.mat',
                          transpose=True, print_dim=True)
 
-    # Preprocessing
+    if as_numpy:
+        return X, labels
 
     # Split data and generate the data loaders
     train_loader, val_loader, test_loader, scaler = \
@@ -112,7 +113,7 @@ def load_kdd_smtp(args, **kwargs):
     return train_loader, val_loader, test_loader, scaler, args
 
 
-def load_kdd_http(args, **kwargs):
+def load_kdd_http(args, as_numpy, **kwargs):
 
     # Set args
     args.layer_dims = (3, 10, 2, 10, 3)
@@ -121,7 +122,8 @@ def load_kdd_http(args, **kwargs):
     X, labels = read_mat('./data/kdd_http/kdd_http.mat',
                          transpose=True, print_dim=True)
 
-    # Preprocessing
+    if as_numpy:
+        return X, labels
 
     # Split data and generate the data loaders
     train_loader, val_loader, test_loader, scaler = \
@@ -130,7 +132,7 @@ def load_kdd_http(args, **kwargs):
     return train_loader, val_loader, test_loader, scaler, args
 
 
-def load_shuttle(args, **kwargs):
+def load_shuttle(args, as_numpy, **kwargs):
 
     # Set args
     args.layer_dims = (9, 20, 5, 20, 9)
@@ -139,7 +141,8 @@ def load_shuttle(args, **kwargs):
     X, labels = read_mat('./data/shuttle/shuttle.mat',
                          transpose=False, print_dim=True)
 
-    # Preprocessing
+    if as_numpy:
+        return X, labels
 
     # Split data and generate the data loaders
     train_loader, val_loader, test_loader, scaler = \
@@ -148,7 +151,7 @@ def load_shuttle(args, **kwargs):
     return train_loader, val_loader, test_loader, scaler, args
 
 
-def load_forest_cover(args, **kwargs):
+def load_forest_cover(args, as_numpy, **kwargs):
 
     # Set args
     args.layer_dims = (10, 20, 5, 20, 10)
@@ -157,7 +160,8 @@ def load_forest_cover(args, **kwargs):
     X, labels = read_mat('./data/forest_cover/forest_cover.mat',
                          transpose=False, print_dim=True)
 
-    # Preprocessing
+    if as_numpy:
+        return X, labels
 
     # Split data and generate the data loaders
     train_loader, val_loader, test_loader, scaler = \
@@ -176,13 +180,13 @@ def load_dataset(args, **kwargs):
     :return: Tuple: train_loader, val_loader, test_loader, labels_split, args
     '''
     if args.dataset_name == 'kdd_smtp':
-        data_tuple = load_kdd_smtp(args, **kwargs)
+        data_tuple = load_kdd_smtp(args, False, **kwargs)
     elif args.dataset_name == 'kdd_http':
-        data_tuple = load_kdd_http(args, **kwargs)
+        data_tuple = load_kdd_http(args, False, **kwargs)
     elif args.dataset_name == 'shuttle':
-        data_tuple = load_shuttle(args, **kwargs)
+        data_tuple = load_shuttle(args, False, **kwargs)
     elif args.dataset_name == 'forest_cover':
-        data_tuple = load_forest_cover(args, **kwargs)
+        data_tuple = load_forest_cover(args, False, **kwargs)
     else:
         raise Exception('Wrong name of the dataset!')
     return data_tuple

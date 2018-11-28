@@ -27,7 +27,7 @@ parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=200)
+parser.add_argument('--n_epochs', type=int, default=500)
 parser.add_argument('--batch_size', type=int, default=512)
 parser.add_argument('--no_adam',  dest='adam', action='store_false',
                     help='boolean whether to not use adam optimizer but SGD with momentum')
