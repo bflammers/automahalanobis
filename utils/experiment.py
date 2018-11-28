@@ -44,6 +44,12 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, scaler,
 
     return model, epoch
 
+def outlier_factor(x, x_val):
+    err = x - x_val
+    err = torch.pow(err, 2)
+    err = torch.sum(err, 1)
+    return err / len(err)
+
 
 def performance(anomalies, scores, percentage):
 
@@ -92,11 +98,14 @@ def validate(data_loader, model, criterion, scaler, device):
 
         # Construct y tensor and calculate loss
         y_val = torch.zeros_like(out) if model.mahalanobis else X_val
-        loss += criterion(out, y_val)
+        loss = criterion(out, y_val)
+
+        # Determine anomaly scores
+        val_scores = out if model.mahalanobis else outlier_factor(out, X_val)
 
         # Fill anomaly and score tensors to compute performance on full set
         anomalies.fill(labels_val)
-        scores.fill(out)
+        scores.fill(val_scores)
 
     loss /= i + 1
     top1 = performance(anomalies.X, scores.X, 1).item()
@@ -107,6 +116,10 @@ def validate(data_loader, model, criterion, scaler, device):
     return loss.item(), top1, top5, top10, top25
 
 if __name__=='__main__':
+
+    x = torch.randn(10,3)
+    x_val = torch.randn_like(x)
+    print(outlier_factor(x, x_val))
 
     from utils.dataloading import load_dataset
     from argparse import Namespace
