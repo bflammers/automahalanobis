@@ -22,7 +22,7 @@ parser.add_argument('--test_prop', type=str, default=0.2)
 parser.add_argument('--val_prop', type=str, default=0.2)
 
 # Training args
-parser.add_argument('--n_epochs', type=int, default=5)
+parser.add_argument('--n_epochs', type=int, default=100)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--adam', type=bool, default=True,
                     help='boolean whether to use adam optimizer (True) or SGD with momentum')
@@ -85,3 +85,5 @@ if __name__ == '__main__':
     # state = torch.load()
     # model.load_state_dict(state['state_dict'])
     # optimizer.load_state_dict(state['optimizer'])
+
+
