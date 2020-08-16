@@ -67,23 +67,23 @@ def performance(anomalies, scores, percentage):
 
     return torch.sum(ordered_anomalies[:n_top]) / torch.sum(anomalies)
 
+class FillableArray:
+
+    def __repr__(self):
+        return self.X.__str__()
+
+    def __init__(self, n, tensor=False):
+        self.n = n
+        self.X = torch.Tensor(torch.zeros(n)) if tensor else np.zeros(n)
+        self.i = 0
+
+    def fill(self, x):
+        stop_ind = self.i + len(x)
+        assert self.n >= stop_ind
+        self.X[self.i:stop_ind] = x.flatten()
+        self.i = stop_ind
+
 def validate(data_loader, model, criterion, scaler, device):
-
-    class FillableArray:
-
-        def __repr__(self):
-            return self.X.__str__()
-
-        def __init__(self, n, tensor=False):
-            self.n = n
-            self.X = torch.Tensor(torch.zeros(n)) if tensor else np.zeros(n)
-            self.i = 0
-
-        def fill(self, x):
-            stop_ind = self.i + len(x)
-            assert self.n >= stop_ind
-            self.X[self.i:stop_ind] = x.flatten()
-            self.i = stop_ind
 
     nrow = len(data_loader.dataset)
     anomalies = FillableArray(nrow, tensor=True)
